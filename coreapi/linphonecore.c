@@ -1586,20 +1586,22 @@ static void linphone_core_register_default_codecs(LinphoneCore *lc){
 	/*hack for opus, that needs to be disabed by default on ARM single processor, otherwise there is no cpu left for video processing*/
 	if (ms_get_cpu_count()==1) opus_enabled=FALSE;
 #endif
-	linphone_core_register_payload_type(lc,&payload_type_opus,"useinbandfec=1; stereo=0; sprop-stereo=0",opus_enabled);
-	linphone_core_register_payload_type(lc,&payload_type_silk_wb,NULL,TRUE);
-	linphone_core_register_payload_type(lc,&payload_type_speex_wb,"vbr=on",TRUE);
 	linphone_core_register_payload_type(lc,&payload_type_speex_nb,"vbr=on",TRUE);
-	linphone_core_register_payload_type(lc,&payload_type_pcmu8000,NULL,TRUE);
 	linphone_core_register_payload_type(lc,&payload_type_pcma8000,NULL,TRUE);
+	linphone_core_register_payload_type(lc,&payload_type_g729,"annexb=no",TRUE);
+	linphone_core_register_payload_type(lc,&payload_type_g726_16,NULL,TRUE);
+	linphone_core_register_payload_type(lc,&payload_type_gsm,NULL,TRUE);
+	linphone_core_register_payload_type(lc,&payload_type_pcmu8000,NULL,TRUE);
+	linphone_core_register_payload_type(lc,&payload_type_ilbc,"mode=30",TRUE);
+
+#if 0
+	linphone_core_register_payload_type(lc,&payload_type_opus,"useinbandfec=1; stereo=0; sprop-stereo=0",opus_enabled);
+	linphone_core_register_payload_type(lc,&payload_type_silk_wb,NULL,FALSE);
+	linphone_core_register_payload_type(lc,&payload_type_speex_wb,"vbr=on",TRUE);
 
 	/*other audio codecs, not enabled by default, in order of preference*/
-	linphone_core_register_payload_type(lc,&payload_type_gsm,NULL,FALSE);
-	linphone_core_register_payload_type(lc,&payload_type_g722,NULL,FALSE);
-	linphone_core_register_payload_type(lc,&payload_type_ilbc,"mode=30",FALSE);
-	linphone_core_register_payload_type(lc,&payload_type_amr,"octet-align=1",FALSE);
-	linphone_core_register_payload_type(lc,&payload_type_amrwb,"octet-align=1",FALSE);
-	linphone_core_register_payload_type(lc,&payload_type_g729,"annexb=no",FALSE);
+	linphone_core_register_payload_type(lc,&payload_type_amr,"octet-align=1",TRUE);
+	linphone_core_register_payload_type(lc,&payload_type_amrwb,"octet-align=1",TRUE);
 	/* For AAC, we use a config value to determine if we ought to support SBR. Since it is not offically supported
 	 * for the mpeg4-generic mime type, setting this flag to 1 will break compatibility with other clients. */
 	if( lp_config_get_int(lc->config, "misc", "aac_use_sbr", FALSE) ) {
@@ -1610,26 +1612,30 @@ static void linphone_core_register_default_codecs(LinphoneCore *lc){
 		aac_fmtp162248 = "config=F8EE2000; constantDuration=512; indexDeltaLength=3; indexLength=3; mode=AAC-hbr; profile-level-id=76; sizeLength=13; streamType=5";
 		aac_fmtp3244   = "config=F8E82000; constantDuration=512; indexDeltaLength=3; indexLength=3; mode=AAC-hbr; profile-level-id=76; sizeLength=13; streamType=5";
 	}
-	linphone_core_register_payload_type(lc,&payload_type_aaceld_16k,aac_fmtp162248,FALSE);
+	linphone_core_register_payload_type(lc,&payload_type_g722,NULL,TRUE);
+	linphone_core_register_payload_type(lc,&payload_type_aaceld_16k,aac_fmtp162248,TRUE);
 	linphone_core_register_payload_type(lc,&payload_type_aaceld_22k,aac_fmtp162248,FALSE);
 	linphone_core_register_payload_type(lc,&payload_type_aaceld_32k,aac_fmtp3244,FALSE);
 	linphone_core_register_payload_type(lc,&payload_type_aaceld_44k,aac_fmtp3244,FALSE);
 	linphone_core_register_payload_type(lc,&payload_type_aaceld_48k,aac_fmtp162248,FALSE);
+%endif
 	linphone_core_register_payload_type(lc,&payload_type_isac,NULL,FALSE);
+#if 0
 	linphone_core_register_payload_type(lc,&payload_type_speex_uwb,"vbr=on",FALSE);
 	linphone_core_register_payload_type(lc,&payload_type_silk_nb,NULL,FALSE);
 	linphone_core_register_payload_type(lc,&payload_type_silk_mb,NULL,FALSE);
 	linphone_core_register_payload_type(lc,&payload_type_silk_swb,NULL,FALSE);
-	linphone_core_register_payload_type(lc,&payload_type_g726_16,NULL,FALSE);
-	linphone_core_register_payload_type(lc,&payload_type_g726_24,NULL,FALSE);
-	linphone_core_register_payload_type(lc,&payload_type_g726_32,NULL,FALSE);
-	linphone_core_register_payload_type(lc,&payload_type_g726_40,NULL,FALSE);
-	linphone_core_register_payload_type(lc,&payload_type_aal2_g726_16,NULL,FALSE);
-	linphone_core_register_payload_type(lc,&payload_type_aal2_g726_24,NULL,FALSE);
-	linphone_core_register_payload_type(lc,&payload_type_aal2_g726_32,NULL,FALSE);
-	linphone_core_register_payload_type(lc,&payload_type_aal2_g726_40,NULL,FALSE);
+%endif
+	linphone_core_register_payload_type(lc,&payload_type_g726_24,NULL,TRUE);
+	linphone_core_register_payload_type(lc,&payload_type_g726_32,NULL,TRUE);
+	linphone_core_register_payload_type(lc,&payload_type_g726_40,NULL,TRUE);
+#if 0
+	linphone_core_register_payload_type(lc,&payload_type_aal2_g726_16,NULL,TRUE);
+	linphone_core_register_payload_type(lc,&payload_type_aal2_g726_24,NULL,TRUE);
+	linphone_core_register_payload_type(lc,&payload_type_aal2_g726_32,NULL,TRUE);
+	linphone_core_register_payload_type(lc,&payload_type_aal2_g726_40,NULL,TRUE);
 
-
+#endif
 
 #ifdef VIDEO_ENABLED
 	/*default enabled video codecs, in order of preference*/
