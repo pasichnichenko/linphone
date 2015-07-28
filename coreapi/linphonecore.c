@@ -1618,14 +1618,14 @@ static void linphone_core_register_default_codecs(LinphoneCore *lc){
 	linphone_core_register_payload_type(lc,&payload_type_aaceld_32k,aac_fmtp3244,FALSE);
 	linphone_core_register_payload_type(lc,&payload_type_aaceld_44k,aac_fmtp3244,FALSE);
 	linphone_core_register_payload_type(lc,&payload_type_aaceld_48k,aac_fmtp162248,FALSE);
-%endif
+#endif
 	linphone_core_register_payload_type(lc,&payload_type_isac,NULL,FALSE);
 #if 0
 	linphone_core_register_payload_type(lc,&payload_type_speex_uwb,"vbr=on",FALSE);
 	linphone_core_register_payload_type(lc,&payload_type_silk_nb,NULL,FALSE);
 	linphone_core_register_payload_type(lc,&payload_type_silk_mb,NULL,FALSE);
 	linphone_core_register_payload_type(lc,&payload_type_silk_swb,NULL,FALSE);
-%endif
+#endif
 	linphone_core_register_payload_type(lc,&payload_type_g726_24,NULL,TRUE);
 	linphone_core_register_payload_type(lc,&payload_type_g726_32,NULL,TRUE);
 	linphone_core_register_payload_type(lc,&payload_type_g726_40,NULL,TRUE);
