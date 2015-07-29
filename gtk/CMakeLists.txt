@@ -20,12 +20,6 @@
 #
 ############################################################################
 
-if(WIN32)
-	set(GTK2_ADDITIONAL_SUFFIXES "../lib/glib-2.0/include" "../lib/gtk-2.0/include")
-endif()
-find_package(GTK2 2.18 REQUIRED gtk)
-find_package(Intl REQUIRED)
-
 set(UI_FILES
 	about.ui
 	audio_assistant.ui
@@ -63,7 +57,6 @@ set(SOURCE_FILES
 	loginframe.c
 	main.c
 	propertybox.c
-	setupwizard.c
 	singleinstance.c
 	status_icon.c
 	status_notifier.c
@@ -72,12 +65,11 @@ set(SOURCE_FILES
 	utils.c
 	videowindow.c
 )
+if(ENABLE_ASSISTANT)
+	list(APPEND SOURCE_FILES setupwizard.c)
+endif()
 if(WIN32)
 	list(APPEND SOURCE_FILES linphone.rc)
-endif()
-
-if(GETTEXT_FOUND)
-	add_definitions("-DENABLE_NLS")
 endif()
 
 if(WIN32)
@@ -88,9 +80,10 @@ endif()
 set_target_properties(linphone-gtk PROPERTIES OUTPUT_NAME linphone LINKER_LANGUAGE CXX)
 target_include_directories(linphone-gtk PUBLIC ${GTK2_INCLUDE_DIRS} ${INTL_INCLUDE_DIRS})
 target_link_libraries(linphone-gtk linphone ${GTK2_LIBRARIES})
-if(INTL_LIBRARIES)
+if(INTL_FOUND)
 	target_link_libraries(linphone-gtk ${INTL_LIBRARIES})
 endif()
+
 if(WIN32)
 	target_link_libraries(linphone-gtk Wininet)
 endif()

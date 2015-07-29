@@ -69,7 +69,7 @@ static void call_multicast_base(bool_t video) {
 	linphone_core_manager_destroy(pauline);
 
 	leaked_objects=belle_sip_object_get_object_count()-begin;
-	BC_ASSERT_TRUE(leaked_objects==0);
+	BC_ASSERT_EQUAL(leaked_objects, 0, int, "%d");
 	if (leaked_objects>0){
 		belle_sip_object_dump_active_objects();
 	}
@@ -271,7 +271,7 @@ test_t multicast_call_tests[] = {
 
 test_suite_t multicast_call_test_suite = {
 	"Multicast Call",
-	NULL,
+	liblinphone_tester_setup,
 	NULL,
 	sizeof(multicast_call_tests) / sizeof(multicast_call_tests[0]),
 	multicast_call_tests

@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "lpconfig.h"
 
 // stat
-#ifndef WIN32
+#ifndef _WIN32
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -122,7 +122,7 @@ void linphone_core_update_streams(LinphoneCore *lc, LinphoneCall *call, SalMedia
 	bool_t all_muted=FALSE;
 	bool_t send_ringbacktone=FALSE;
 	int md_changed=0;
-	
+
 
 	if (!((call->state == LinphoneCallIncomingEarlyMedia) && (linphone_core_get_ring_during_incoming_early_media(lc)))) {
 		linphone_core_stop_ringing(lc);
@@ -362,7 +362,7 @@ static void call_received(SalOp *h){
 	linphone_call_ref(call); /*prevent the call from being destroyed while we are notifying, if the user declines within the state callback */
 
 	call->bg_task_id=sal_begin_background_task("liblinphone call notification", NULL, NULL);
-	
+
 	if ((linphone_core_get_firewall_policy(lc) == LinphonePolicyUseIce) && (call->ice_session != NULL)) {
 		/* Defer ringing until the end of the ICE candidates gathering process. */
 		ms_message("Defer ringing to gather ICE candidates");
@@ -747,7 +747,7 @@ static void call_updating(SalOp *op, bool_t is_update){
 		case LinphoneCallPausing:
 		case LinphoneCallResuming:
 		case LinphoneCallUpdatedByRemote:
-			sal_call_decline(call->op,SalReasonNotImplemented,NULL);
+			sal_call_decline(call->op,SalReasonInternalError,NULL);
 			/*no break*/
 		case LinphoneCallIdle:
 		case LinphoneCallOutgoingInit:
@@ -773,7 +773,7 @@ static void call_terminated(SalOp *op, const char *from){
 	switch(linphone_call_get_state(call)){
 		case LinphoneCallEnd:
 		case LinphoneCallError:
-			ms_warning("call_terminated: ignoring.");
+			ms_warning("call_terminated: already terminated, ignoring.");
 			return;
 		break;
 		case LinphoneCallIncomingReceived:
@@ -1160,27 +1160,27 @@ static void ping_reply(SalOp *op){
 }
 
 static bool_t fill_auth_info_with_client_certificate(LinphoneCore *lc, SalAuthInfo* sai) {
-		const char *chain_file = lp_config_get_string(lc->config,"sip","client_cert_chain", 0);
-		const char *key_file = lp_config_get_string(lc->config,"sip","client_cert_key", 0);;
+	const char *chain_file = lp_config_get_string(lc->config,"sip","client_cert_chain", 0);
+	const char *key_file = lp_config_get_string(lc->config,"sip","client_cert_key", 0);;
 
-#ifndef WIN32
-		{
-		// optinal check for files
-		struct stat st;
-		if (stat(key_file,&st)) {
-			ms_warning("No client certificate key found in %s", key_file);
-			return FALSE;
-		}
-		if (stat(chain_file,&st)) {
-			ms_warning("No client certificate chain found in %s", chain_file);
-			return FALSE;
-		}
-		}
+#ifndef _WIN32
+	{
+	// optinal check for files
+	struct stat st;
+	if (stat(key_file,&st)) {
+		ms_warning("No client certificate key found in %s", key_file);
+		return FALSE;
+	}
+	if (stat(chain_file,&st)) {
+		ms_warning("No client certificate chain found in %s", chain_file);
+		return FALSE;
+	}
+	}
 #endif
 
-		sal_certificates_chain_parse_file(sai, chain_file, SAL_CERTIFICATE_RAW_FORMAT_PEM );
-		sal_signing_key_parse_file(sai, key_file, "");
-		return sai->certificates && sai->key;
+	sal_certificates_chain_parse_file(sai, chain_file, SAL_CERTIFICATE_RAW_FORMAT_PEM );
+	sal_signing_key_parse_file(sai, key_file, "");
+	return sai->certificates && sai->key;
 }
 
 static bool_t fill_auth_info(LinphoneCore *lc, SalAuthInfo* sai) {
@@ -1267,7 +1267,7 @@ static void text_delivery_update(SalOp *op, SalTextDeliveryStatus status){
 	linphone_chat_message_update_state(chat_msg);
 
 	if (chat_msg && (chat_msg->cb || (chat_msg->callbacks && linphone_chat_message_cbs_get_msg_state_changed(chat_msg->callbacks)))) {
-		ms_message("Notifying text delivery with status %i",chat_msg->state);
+		ms_message("Notifying text delivery with status %s",linphone_chat_message_state_to_string(chat_msg->state));
 		if (chat_msg->callbacks && linphone_chat_message_cbs_get_msg_state_changed(chat_msg->callbacks)) {
 			linphone_chat_message_cbs_get_msg_state_changed(chat_msg->callbacks)(chat_msg, chat_msg->state);
 		} else {

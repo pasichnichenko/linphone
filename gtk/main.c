@@ -306,7 +306,7 @@ static void linphone_gtk_init_liblinphone(const char *config_file,
 	g_free(user_certificates_dir);
 	linphone_core_enable_video_capture(the_core, TRUE);
 	linphone_core_enable_video_display(the_core, TRUE);
-	linphone_core_set_native_video_window_id(the_core,-1);/*don't create the window*/
+	linphone_core_set_native_video_window_id(the_core,LINPHONE_VIDEO_DISPLAY_NONE);/*don't create the window*/
 	if (no_video) {
 		_linphone_gtk_enable_video(FALSE);
 		linphone_gtk_set_ui_config_int("videoselfview",0);
@@ -379,7 +379,7 @@ void linphone_gtk_destroy_window(GtkWidget *widget) {
 	g_object_unref (G_OBJECT (builder));
 }
 
-GtkWidget *linphone_gtk_create_window(const char *window_name){
+GtkWidget *linphone_gtk_create_window(const char *window_name, GtkWidget *parent){
 	GError* error = NULL;
 	GtkBuilder* builder = gtk_builder_new ();
 	char path[512];
@@ -402,6 +402,13 @@ GtkWidget *linphone_gtk_create_window(const char *window_name){
 	g_object_set_data(G_OBJECT(w), "builder",builder);
 	gtk_builder_connect_signals(builder,w);
 	linphone_gtk_configure_window(w,window_name);
+	if(parent) {
+// 		gtk_window_set_modal(GTK_WINDOW(w), TRUE);
+		gtk_window_set_transient_for(GTK_WINDOW(w), GTK_WINDOW(parent));
+		gtk_window_set_position(GTK_WINDOW(w), GTK_WIN_POS_CENTER_ON_PARENT);
+	} else {
+// 		gtk_window_set_modal(GTK_WINDOW(w), FALSE);
+	}
 	return w;
 }
 
@@ -527,8 +534,10 @@ void linphone_gtk_show_about(void){
 	    linphone_gtk_get_ui_config("logo","linphone-banner.png"));
 	static const char *defcfg="defcfg";
 
-	about=linphone_gtk_create_window("about");
+	about=linphone_gtk_create_window("about", the_ui);
+
 	gtk_about_dialog_set_url_hook(about_url_clicked,NULL,NULL);
+
 	memset(&filestat,0,sizeof(filestat));
 	if (stat(license_file,&filestat)!=0){
 		license_file="COPYING";
@@ -599,18 +608,14 @@ static gboolean linphone_gtk_iterate(LinphoneCore *lc){
 static gboolean uribar_completion_matchfunc(GtkEntryCompletion *completion, const gchar *key, GtkTreeIter *iter, gpointer user_data){
 	char* address = NULL;
 	gboolean ret  = FALSE;
-	gchar *tmp= NULL;
 	gtk_tree_model_get(gtk_entry_completion_get_model(completion),iter,0,&address,-1);
 
-	tmp = g_utf8_casefold(address,-1);
-	if (tmp){
-		if (strstr(tmp,key))
-			ret=TRUE;
+	if(address) {
+		gchar *tmp = g_utf8_casefold(address,-1);
+		if (strstr(tmp,key)) ret=TRUE;
 		g_free(tmp);
-	}
-
-	if( address)
 		g_free(address);
+	}
 
 	return ret;
 }
@@ -1053,7 +1058,7 @@ static void linphone_gtk_notify_recv(LinphoneCore *lc, LinphoneFriend * fid){
 static void linphone_gtk_new_subscriber_response(GtkWidget *dialog, guint response_id, LinphoneFriend *lf){
 	switch(response_id){
 		case GTK_RESPONSE_YES:
-			linphone_gtk_show_contact(lf, GTK_WINDOW(the_ui));
+			linphone_gtk_show_contact(lf, the_ui);
 		break;
 		default:
 			linphone_core_reject_subscriber(linphone_gtk_get_core(),lf);
@@ -1070,7 +1075,7 @@ static void linphone_gtk_new_unknown_subscriber(LinphoneCore *lc, LinphoneFriend
 		return;
 	}
 
-	message=g_strdup_printf(_("%s would like to add you to his contact list.\nWould you allow him to see your presence status or add him to your contact list ?\nIf you answer no, this person will be temporarily blacklisted."),url);
+	message=g_strdup_printf(_("%s would like to add you to his/her contact list.\nWould you add him/her to your contact list and allow him/her to see your presence status?\nIf you answer no, this person will be temporarily blacklisted."),url);
 	dialog = gtk_message_dialog_new (
 				GTK_WINDOW(linphone_gtk_get_main_window()),
                                 GTK_DIALOG_DESTROY_WITH_PARENT,
@@ -1135,7 +1140,7 @@ void linphone_gtk_password_ok(GtkWidget *w){
 }
 
 static void linphone_gtk_auth_info_requested(LinphoneCore *lc, const char *realm, const char *username, const char *domain){
-	GtkWidget *w=linphone_gtk_create_window("password");
+	GtkWidget *w=linphone_gtk_create_window("password", the_ui);
 	GtkWidget *label=linphone_gtk_get_widget(w,"message");
 	LinphoneAuthInfo *info;
 	gchar *msg;
@@ -1871,7 +1876,7 @@ void linphone_gtk_create_keypad(GtkWidget *button){
 	if(k!=NULL){
 		gtk_widget_destroy(k);
 	}
-	keypad=linphone_gtk_create_window("keypad");
+	keypad=linphone_gtk_create_window("keypad", NULL);
 	linphone_gtk_connect_digits(keypad);
 	linphone_gtk_init_dtmf_table(keypad);
 	g_object_set_data(G_OBJECT(mw),"keypad",(gpointer)keypad);
@@ -1915,6 +1920,11 @@ static void linphone_gtk_init_main_window(){
 #endif
 	linphone_gtk_check_menu_items();
 	linphone_core_enable_video_preview(linphone_gtk_get_core(),FALSE);
+#ifdef BUILD_WIZARD
+	gtk_widget_set_visible(linphone_gtk_get_widget(main_window, "assistant_item"), TRUE);
+#else
+	gtk_widget_set_visible(linphone_gtk_get_widget(main_window, "assistant_item"), FALSE);
+#endif
 }
 
 void linphone_gtk_log_handler(OrtpLogLevel lev, const char *fmt, va_list args){
@@ -1979,7 +1989,9 @@ static void linphone_gtk_check_soundcards(){
 static void linphone_gtk_quit_core(void){
 	linphone_gtk_unmonitor_usb();
 	g_source_remove_by_user_data(linphone_gtk_get_core());
+#ifdef BUILD_WIZARD
 	linphone_gtk_close_assistant();
+#endif
 	linphone_gtk_set_ldap(NULL);
 	linphone_gtk_destroy_log_window();
 	linphone_core_destroy(the_core);
@@ -2019,10 +2031,12 @@ static gboolean on_block_termination(void){
 static void linphone_gtk_init_ui(void){
 	linphone_gtk_init_main_window();
 
+#ifdef BUILD_WIZARD
 	// Veryfing if at least one sip account is configured. If not, show wizard
 	if (linphone_core_get_proxy_config_list(linphone_gtk_get_core()) == NULL) {
 		linphone_gtk_show_assistant(the_ui);
 	}
+#endif
 
 	if(run_audio_assistant){
 		linphone_gtk_show_audio_assistant();
@@ -2181,7 +2195,7 @@ core_start:
 		return 0;
 	}
 
-	the_ui=linphone_gtk_create_window("main");
+	the_ui=linphone_gtk_create_window("main", NULL);
 
 	g_object_set_data(G_OBJECT(the_ui),"is_created",GINT_TO_POINTER(FALSE));
 

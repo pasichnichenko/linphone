@@ -464,6 +464,9 @@ SalReason sal_reason_to_sip_code(SalReason r){
 		case SalReasonBadGateway:
 			ret=502;
 			break;
+		case SalReasonInternalError:
+			ret=500;
+			break;
 	}
 	return ret;
 }
@@ -508,6 +511,8 @@ SalReason _sal_reason_from_sip_code(int code) {
 		return SalReasonNotAcceptable;
 	case 491:
 		return SalReasonRequestPending;
+	case 500:
+		return SalReasonInternalError;
 	case 501:
 		return SalReasonNotImplemented;
 	case 502:
@@ -608,7 +613,10 @@ void set_or_update_dialog(SalOp* op, belle_sip_dialog_t* dialog) {
 			unlink_op_with_dialog(op,op->dialog);
 			op->dialog=NULL;
 		}
-		if (dialog) op->dialog=link_op_with_dialog(op,dialog);
+		if (dialog) {
+			op->dialog=link_op_with_dialog(op,dialog);
+			belle_sip_dialog_enable_pending_trans_checking(dialog,op->base.root->pending_trans_checking);
+		}
 	}
 	sal_op_unref(op);
 }

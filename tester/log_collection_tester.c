@@ -30,7 +30,7 @@
 
 
 /*getline is POSIX 2008, not available on many systems.*/
-#if defined(ANDROID) || defined(WIN32)
+#if defined(ANDROID) || defined(_WIN32)
 /* This code is public domain -- Will Hartung 4/9/09 */
 static size_t getline(char **lineptr, size_t *n, FILE *stream) {
 	char *bufptr = NULL;
@@ -91,7 +91,7 @@ static size_t getline(char **lineptr, size_t *n, FILE *stream) {
 static LinphoneLogCollectionState old_collection_state;
 static void collect_init()  {
 	old_collection_state = linphone_core_log_collection_enabled();
-	linphone_core_set_log_collection_path(bc_tester_writable_dir_prefix);
+	linphone_core_set_log_collection_path(bc_tester_get_writable_dir_prefix());
 }
 
 static void collect_cleanup(LinphoneCoreManager *marie)  {
@@ -143,14 +143,14 @@ static FILE* gzuncompress(const char* filepath) {
 static time_t get_current_time() {
 	struct timeval tp;
 	struct tm *lt;
-#ifndef WIN32
+#ifndef _WIN32
 	struct tm tmbuf;
 #endif
 	time_t tt;
 	ortp_gettimeofday(&tp,NULL);
 	tt = (time_t)tp.tv_sec;
 
-#ifdef WIN32
+#ifdef _WIN32
 	lt = localtime(&tt);
 #else
 	lt = localtime_r(&tt,&tmbuf);
@@ -172,7 +172,7 @@ static time_t check_file(LinphoneCoreManager* mgr)  {
 		int line_count = 0;
 		char *line = NULL;
 		size_t line_size = 256;
-#ifndef WIN32
+#ifndef _WIN32
 		struct tm tm_curr = {0};
 		time_t time_prev = 0;
 #endif
@@ -186,13 +186,13 @@ static time_t check_file(LinphoneCoreManager* mgr)  {
 		BC_ASSERT_PTR_NOT_NULL(file);
 		if (!file) return 0;
 		// 1) expect to find folder name in filename path
-		BC_ASSERT_PTR_NOT_NULL(strstr(filepath, bc_tester_writable_dir_prefix));
+		BC_ASSERT_PTR_NOT_NULL(strstr(filepath, bc_tester_get_writable_dir_prefix()));
 
 		// 2) check file contents
 		while (getline(&line, &line_size, file) != -1) {
 			// a) there should be at least 25 lines
 			++line_count;
-#ifndef WIN32
+#ifndef _WIN32
 			// b) logs should be ordered by date (format: 2014-11-04 15:22:12:606)
 			if (strlen(line) > 24) {
 				char date[24] = {'\0'};
@@ -216,7 +216,7 @@ static time_t check_file(LinphoneCoreManager* mgr)  {
 
 		timediff = labs((long int)log_time - (long int)cur_time);
 		(void)timediff;
-#ifndef WIN32
+#ifndef _WIN32
 		BC_ASSERT_TRUE( timediff <= 1 );
 		if( !(timediff <= 1) ){
 			char buffers[2][128] = {{0}};
@@ -290,8 +290,8 @@ static void logCollectionUploadStateChangedCb(LinphoneCore *lc, LinphoneCoreLogC
 	}
 }
 static void upload_collected_traces()  {
-	LinphoneCoreManager* marie = setup(TRUE);
-	if (transport_supported(marie->lc, LinphoneTransportTls)) {
+	if (transport_supported(LinphoneTransportTls)) {
+		LinphoneCoreManager* marie = setup(TRUE);
 		int waiting = 100;
 		LinphoneCoreVTable *v_table = linphone_core_v_table_new();
 		v_table->log_collection_upload_state_changed = logCollectionUploadStateChangedCb;
@@ -312,8 +312,8 @@ static void upload_collected_traces()  {
 		linphone_core_compress_log_collection(marie->lc);
 		linphone_core_upload_log_collection(marie->lc);
 		BC_ASSERT_TRUE(wait_for(marie->lc,marie->lc,&marie->stat.number_of_LinphoneCoreLogCollectionUploadStateDelivered,2));
+		collect_cleanup(marie);
 	}
-	collect_cleanup(marie);
 }
 
 test_t log_collection_tests[] = {
@@ -326,7 +326,7 @@ test_t log_collection_tests[] = {
 
 test_suite_t log_collection_test_suite = {
 	"LogCollection",
-	NULL,
+	liblinphone_tester_setup,
 	NULL,
 	sizeof(log_collection_tests) / sizeof(log_collection_tests[0]),
 	log_collection_tests

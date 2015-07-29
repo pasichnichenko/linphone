@@ -283,8 +283,15 @@ gboolean linphone_status_icon_init(LinphoneStatusIconReadyCb ready_cb, void *use
 }
 
 void linphone_status_icon_uninit(void) {
-	if(_linphone_status_icon_instance) _linphone_status_icon_free(_linphone_status_icon_instance);
-	if(_linphone_status_icon_impls) g_slist_free(_linphone_status_icon_impls);
+	if(_linphone_status_icon_instance) {
+		_linphone_status_icon_free(_linphone_status_icon_instance);
+		_linphone_status_icon_instance = NULL;
+	}
+	if(_linphone_status_icon_impls) {
+		g_slist_free(_linphone_status_icon_impls);
+		_linphone_status_icon_impls = NULL;
+	}
+	_linphone_status_icon_selected_desc = NULL;
 }
 
 LinphoneStatusIcon *linphone_status_icon_get(void) {
@@ -389,9 +396,9 @@ static const _LinphoneStatusIconDesc _linphone_status_icon_impl_gtk_desc = {
 static void _linphone_status_icon_impl_gtkosx_app_enable_blinking(LinphoneStatusIcon *si, gboolean val) {
 	GtkosxApplication *theMacApp=gtkosx_application_get();
 	gint *attention_id = (gint *)&si->data;
-	if (val && *attention_id == 0) {
-		*attention_id=gtkosx_application_attention_request(theMacApp,CRITICAL_REQUEST);
-	} else if(!val && *attention_id != 0) {
+	if (val) {
+		*attention_id=gtkosx_application_attention_request(theMacApp, CRITICAL_REQUEST);
+	} else if (*attention_id != 0) {
 		gtkosx_application_cancel_attention_request(theMacApp, *attention_id);
 		*attention_id = 0;
 	}

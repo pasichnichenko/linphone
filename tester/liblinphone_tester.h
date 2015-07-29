@@ -52,6 +52,7 @@ extern test_suite_t video_test_suite;
 extern test_suite_t multicast_call_test_suite;
 extern test_suite_t multi_call_test_suite;
 extern test_suite_t proxy_config_test_suite;
+extern int manager_count;
 
 extern int liblinphone_tester_ipv6_available(void);
 
@@ -69,13 +70,15 @@ extern int liblinphone_tester_ipv6_available(void);
 extern void liblinphone_tester_keep_accounts( int keep );
 
 /**
+ * @brief Tells the test whether to not remove recorded audio/video files after the tests.
+ * @details By default recorded files are erased after the test, unless the test is failed.
+**/
+void liblinphone_tester_keep_recorded_files(int keep);
+
+/**
  * @brief Clears the created accounts during the testing session.
  */
 extern void liblinphone_tester_clear_accounts(void);
-
-#ifdef __cplusplus
-};
-#endif
 
 
 extern const char* test_domain;
@@ -293,7 +296,7 @@ void end_call(LinphoneCoreManager *m1, LinphoneCoreManager *m2);
 void disable_all_audio_codecs_except_one(LinphoneCore *lc, const char *mime, int rate);
 void disable_all_video_codecs_except_one(LinphoneCore *lc, const char *mime);
 stats * get_stats(LinphoneCore *lc);
-bool_t transport_supported(LinphoneCore *lc, LinphoneTransportType transport);
+bool_t transport_supported(LinphoneTransportType transport);
 LinphoneCoreManager *get_manager(LinphoneCore *lc);
 const char *liblinphone_tester_get_subscribe_content(void);
 const char *liblinphone_tester_get_notify_content(void);
@@ -322,6 +325,15 @@ static const int audio_cmp_max_shift=20;
  * this function return max value in the last 3 seconds*/
 int linphone_core_manager_get_max_audio_down_bw(const LinphoneCoreManager *mgr);
 int linphone_core_manager_get_max_audio_up_bw(const LinphoneCoreManager *mgr);
+void video_call_base_2(LinphoneCoreManager* pauline,LinphoneCoreManager* marie, bool_t using_policy,LinphoneMediaEncryption mode, bool_t callee_video_enabled, bool_t caller_video_enabled);
+
+int liblinphone_tester_setup();
+void liblinphone_tester_init(void(*ftester_printf)(int level, const char *fmt, va_list args));
+void liblinphone_tester_uninit(void);
+
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif /* LIBLINPHONE_TESTER_H_ */
-

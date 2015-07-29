@@ -65,7 +65,7 @@ extern "C" {
 #define PACKAGE_DATA_DIR "."
 #endif
 
-#ifdef HAVE_GETTEXT
+#ifdef ENABLE_NLS
 #include <libintl.h>
 #ifndef _
 #define _(String) dgettext(GETTEXT_PACKAGE,String)
@@ -80,6 +80,20 @@ extern "C" {
 #endif
 #ifdef ANDROID
 #include <jni.h>
+#endif
+
+#ifdef _WIN32
+#if defined(__MINGW32__) || !defined(WINAPI_FAMILY_PARTITION) || !defined(WINAPI_PARTITION_DESKTOP)
+#define LINPHONE_WINDOWS_DESKTOP 1
+#elif defined(WINAPI_FAMILY_PARTITION)
+#if defined(WINAPI_PARTITION_DESKTOP) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#define LINPHONE_WINDOWS_DESKTOP 1
+#elif defined(WINAPI_PARTITION_PHONE_APP) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_PHONE_APP)
+#define LINPHONE_WINDOWS_PHONE 1
+#elif defined(WINAPI_PARTITION_APP) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP)
+#define LINPHONE_WINDOWS_UNIVERSAL 1
+#endif
+#endif
 #endif
 
 struct _LinphoneCallParams{
@@ -222,6 +236,8 @@ struct _LinphoneCall{
 	SalMediaDescription *resultdesc;
 	struct _RtpProfile *audio_profile;
 	struct _RtpProfile *video_profile;
+	struct _RtpProfile *rtp_io_audio_profile;
+	struct _RtpProfile *rtp_io_video_profile;
 	struct _LinphoneCallLog *log;
 	LinphoneAddress *me; /*Either from or to based on call dir*/
 	SalOp *op;
@@ -236,7 +252,7 @@ struct _LinphoneCall{
 	StunCandidate ac,vc; /*audio video ip/port discovered by STUN*/
 	struct _AudioStream *audiostream;  /**/
 	struct _VideoStream *videostream;
-	unsigned long video_window_id;
+	void *video_window_id;
 	MSAudioEndpoint *endpoint; /*used for conferencing*/
 	char *refer_to;
 	LinphoneCallParams *params;
@@ -347,14 +363,15 @@ static MS2_INLINE int get_min_bandwidth(int dbw, int ubw){
 }
 
 static MS2_INLINE bool_t bandwidth_is_greater(int bw1, int bw2){
-	if (bw1<0) return TRUE;
-	else if (bw2<0) return FALSE;
+	if (bw1<=0) return TRUE;
+	else if (bw2<=0) return FALSE;
 	else return bw1>=bw2;
 }
 
 static MS2_INLINE int get_remaining_bandwidth_for_video(int total, int audio){
-	if (total<=0) return 0;
-	return total-audio-10;
+	int ret = total-audio-10;
+	if (ret < 0) ret = 0;
+	return ret;
 }
 
 static MS2_INLINE void set_string(char **dest, const char *src){
@@ -539,6 +556,7 @@ struct _LinphoneChatRoom{
 	LinphoneAddress *peer_url;
 	MSList *messages_hist;
 	MSList *transient_messages;
+	int unread_count;
 	LinphoneIsComposingState remote_is_composing;
 	LinphoneIsComposingState is_composing;
 	belle_sip_source_t *remote_composing_refresh_timer;
@@ -767,8 +785,8 @@ struct _LinphoneCore
 	int audio_bw; /*IP bw consumed by audio codec, set as soon as used codec is known, its purpose is to know the remaining bw for video*/
 	LinphoneCoreWaitingCallback wait_cb;
 	void *wait_ctx;
-	unsigned long video_window_id;
-	unsigned long preview_window_id;
+	void *video_window_id;
+	void *preview_window_id;
 	time_t netup_time; /*time when network went reachable */
 	struct _EcCalibrator *ecc;
 	MSList *hooks;
@@ -1261,7 +1279,7 @@ void v_table_reference_destroy(VTableReference *ref);
 
 void _linphone_core_add_listener(LinphoneCore *lc, LinphoneCoreVTable *vtable, bool_t autorelease);
 #ifdef VIDEO_ENABLED
-MSWebCam *linphone_call_get_video_device(const LinphoneCall *call);
+LINPHONE_PUBLIC MSWebCam *linphone_call_get_video_device(const LinphoneCall *call);
 MSWebCam *get_nowebcam_device();
 #endif
 bool_t linphone_core_lime_for_file_sharing_enabled(const LinphoneCore *lc);

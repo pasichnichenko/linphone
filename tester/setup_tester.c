@@ -127,7 +127,7 @@ static void linphone_lpconfig_from_buffer_zerolen_value(){
 static void linphone_lpconfig_from_file_zerolen_value(){
 	/* parameters that have no value should return NULL, not "". */
 	const char* zero_rc_file = "zero_length_params_rc";
-	char* rc_path = ms_strdup_printf("%s/rcfiles/%s", bc_tester_read_dir_prefix, zero_rc_file);
+	char* rc_path = ms_strdup_printf("%s/rcfiles/%s", bc_tester_get_resource_dir_prefix(), zero_rc_file);
 	LpConfig* conf;
 
 	/* not using lp_config_new() because it expects a readable file, and iOS (for instance)
@@ -148,7 +148,7 @@ static void linphone_lpconfig_from_file_zerolen_value(){
 
 static void linphone_lpconfig_from_xml_zerolen_value(){
 	const char* zero_xml_file = "remote_zero_length_params_rc";
-	char* xml_path = ms_strdup_printf("%s/rcfiles/%s", bc_tester_read_dir_prefix, zero_xml_file);
+	char* xml_path = ms_strdup_printf("%s/rcfiles/%s", bc_tester_get_resource_dir_prefix(), zero_xml_file);
 	LpConfig* conf;
 
 	LinphoneCoreManager* mgr = linphone_core_manager_new2("empty_rc",FALSE);
@@ -265,6 +265,30 @@ static void devices_reload_test(void) {
 	linphone_core_manager_destroy(mgr);
 }
 
+static void codec_usability_test(void) {
+	LinphoneCoreManager *mgr = linphone_core_manager_new2("empty_rc", FALSE);
+	PayloadType *pt = linphone_core_find_payload_type(mgr->lc, "PCMU", 8000, -1);
+
+	BC_ASSERT_TRUE(pt!=NULL);
+	if (!pt) goto end;
+	/*no limit*/
+	linphone_core_set_upload_bandwidth(mgr->lc, 0);
+	linphone_core_set_download_bandwidth(mgr->lc, 0);
+	BC_ASSERT_TRUE(linphone_core_check_payload_type_usability(mgr->lc, pt));
+	/*low limit*/
+	linphone_core_set_upload_bandwidth(mgr->lc, 50);
+	linphone_core_set_download_bandwidth(mgr->lc, 50);
+	BC_ASSERT_FALSE(linphone_core_check_payload_type_usability(mgr->lc, pt));
+
+	/*reasonable limit*/
+	linphone_core_set_upload_bandwidth(mgr->lc, 200);
+	linphone_core_set_download_bandwidth(mgr->lc, 200);
+	BC_ASSERT_TRUE(linphone_core_check_payload_type_usability(mgr->lc, pt));
+
+end:
+	linphone_core_manager_destroy(mgr);
+}
+
 test_t setup_tests[] = {
 	{ "Version check", linphone_version_test },
 	{ "Linphone Address", linphone_address_test },
@@ -278,12 +302,13 @@ test_t setup_tests[] = {
 	{ "LPConfig zero_len value from file", linphone_lpconfig_from_file_zerolen_value },
 	{ "LPConfig zero_len value from XML", linphone_lpconfig_from_xml_zerolen_value },
 	{ "Chat room", chat_root_test },
-	{ "Devices reload", devices_reload_test }
+	{ "Devices reload", devices_reload_test },
+	{ "Codec usability", codec_usability_test }
 };
 
 test_suite_t setup_test_suite = {
 	"Setup",
-	NULL,
+	liblinphone_tester_setup,
 	NULL,
 	sizeof(setup_tests) / sizeof(setup_tests[0]),
 	setup_tests

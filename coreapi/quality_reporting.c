@@ -28,6 +28,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <math.h>
 
+#if TARGET_OS_IPHONE
+#include <sys/sysctl.h>
+#endif
+
 #define STR_REASSIGN(dest, src) {\
 	if (dest != NULL) \
 		ms_free(dest); \
@@ -49,7 +53,7 @@ static void append_to_buffer_valist(char **buff, size_t *buff_size, size_t *offs
 	belle_sip_error_code ret;
 	size_t prevoffset = *offset;
 
-	#ifndef WIN32
+	#ifndef _WIN32
 		va_list cap;/*copy of our argument list: a va_list cannot be re-used (SIGSEGV on linux 64 bits)*/
 		va_copy(cap,args);
 		ret = belle_sip_snprintf_valist(*buff, *buff_size, offset, fmt, cap);
@@ -109,7 +113,6 @@ static void reset_avg_metrics(reporting_session_report_t * report){
 #define METRICS_JITTER_BUFFER 1 << 3
 #define METRICS_DELAY 1 << 4
 #define METRICS_SIGNAL 1 << 5
-#define METRICS_ADAPTIVE_ALGORITHM 1 << 6
 
 static uint8_t are_metrics_filled(const reporting_content_metrics_t rm) {
 	uint8_t ret = 0;
@@ -258,12 +261,15 @@ static void append_metrics_to_buffer(char ** buffer, size_t * size, size_t * off
 
 static int send_report(LinphoneCall* call, reporting_session_report_t * report, const char * report_event) {
 	LinphoneContent *content = linphone_content_new();
-	LinphoneAddress *addr;
 	int expires = -1;
 	size_t offset = 0;
 	size_t size = 2048;
 	char * buffer;
 	int ret = 0;
+	LinphoneEvent *lev;
+	LinphoneAddress *request_uri;
+	char * domain;
+	const char* route;
 
 	/*if we are on a low bandwidth network, do not send reports to not overload it*/
 	if (linphone_call_params_low_bandwidth_enabled(linphone_call_get_current_params(call))){
@@ -283,14 +289,6 @@ static int send_report(LinphoneCall* call, reporting_session_report_t * report, 
 			, linphone_call_get_duration(call)
 			, (report->info.local_addr.ip == NULL || strlen(report->info.local_addr.ip) == 0) ? "local" : "remote");
 		ret = 2;
-		goto end;
-	}
-
-	addr = linphone_address_new(linphone_proxy_config_get_quality_reporting_collector(call->dest_proxy));
-	if (addr == NULL) {
-		ms_warning("QualityReporting[%p]: Asked to submit reporting statistics but no collector address found"
-			, call);
-		ret = 3;
 		goto end;
 	}
 
@@ -331,6 +329,17 @@ static int send_report(LinphoneCall* call, reporting_session_report_t * report, 
 		append_to_buffer(&buffer, &size, &offset, "\r\n");
 	}
 
+#if TARGET_OS_IPHONE
+	{
+		size_t namesize;
+		char *machine;
+		sysctlbyname("hw.machine", NULL, &namesize, NULL, 0);
+		machine = malloc(namesize);
+		sysctlbyname("hw.machine", machine, &namesize, NULL, 0);
+		APPEND_IF_NOT_NULL_STR(&buffer, &size, &offset, "Device: %s\r\n", machine);
+	}
+#endif
+
 	linphone_content_set_buffer(content, buffer, strlen(buffer));
 	ms_free(buffer);
 
@@ -341,7 +350,20 @@ static int send_report(LinphoneCall* call, reporting_session_report_t * report, 
 			content);
 	}
 
-	if (! linphone_core_publish(call->core, addr, "vq-rtcpxr", expires, content)){
+
+	route = linphone_proxy_config_get_quality_reporting_collector(call->dest_proxy);
+	domain = ms_strdup_printf("sip:%s", linphone_proxy_config_get_domain(call->dest_proxy));
+	request_uri = linphone_address_new(route ? route : domain);
+	ms_free(domain);
+	lev=linphone_core_create_publish(call->core, request_uri, "vq-rtcpxr", expires);
+	if (route) {
+		ms_message("Publishing report with custom route %s", route);
+		sal_op_set_route(lev->op, route);
+	}
+
+	if (linphone_event_send_publish(lev, content) != 0){
+		linphone_event_unref(lev);
+		lev=NULL;
 		ret=4;
 	} else {
 		reset_avg_metrics(report);
@@ -352,8 +374,7 @@ static int send_report(LinphoneCall* call, reporting_session_report_t * report, 
 		STR_REASSIGN(report->qos_analyzer.output, NULL);
 	}
 
-	linphone_address_destroy(addr);
-
+	linphone_address_destroy(request_uri);
 	linphone_content_unref(content);
 
 	end:
@@ -460,7 +481,8 @@ void linphone_reporting_update_media_info(LinphoneCall * call, int stats_type) {
 	reporting_session_report_t * report = call->log->reporting.reports[stats_type];
 	char * dialog_id;
 
-	if (!media_report_enabled(call, stats_type))
+	// call->op might be already released if hanging up in state LinphoneCallOutgoingInit
+	if (!media_report_enabled(call, stats_type) || call->op == NULL)
 		return;
 
 	dialog_id = sal_op_get_dialog_id(call->op);

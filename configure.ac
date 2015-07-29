@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT([linphone],[3.8.4],[linphone-developers@nongnu.org])
+AC_INIT([linphone],[3.8.5],[linphone-developers@nongnu.org])
 AC_CANONICAL_SYSTEM
 AC_CONFIG_SRCDIR([coreapi/linphonecore.c])
 
@@ -147,8 +147,7 @@ if test "$mingw_found" != "yes" ; then
 	LIBS="$LIBS $LIBINTL"
 else
 	if test "$USE_NLS" = "yes" ; then
-		AC_DEFINE(ENABLE_NLS,1,[Tells whether localisation is possible])
-		AC_DEFINE(HAVE_GETTEXT,1,[Tells wheter localisation is possible])
+		AC_DEFINE(HAVE_INTL,1,[Tells wheter localisation is possible])
 		LIBS="$LIBS -lintl"
 	fi
 fi
@@ -633,7 +632,7 @@ AC_ARG_ENABLE(zrtp,
 
 dnl this options are just for passing to mediastreamer2 subproject
 AC_ARG_ENABLE(dtls,
-	[AS_HELP_STRING([--enable-dtls], [Turn on dtls support - requires polarssl > 1.4])],
+	[AS_HELP_STRING([--enable-dtls], [Turn on srtp-dtls support - requires polarssl > 1.4])],
 	[case "${enableval}" in
 		yes)	dtls=true ;;
 		no)	dtls=false ;;
@@ -727,6 +726,31 @@ has_sighandler_t=yes,has_sighandler_t=no)
 AC_MSG_RESULT($has_sighandler_t)
 if test "$has_sighandler_t" = "yes" ; then
 	AC_DEFINE( HAVE_SIGHANDLER_T, 1, [Define if sighandler_t available] )
+fi
+
+AC_ARG_ENABLE(assistant,
+	[AS_HELP_STRING([--enable-assistant], [Turn on assistant compiling])],
+	[case "${enableval}" in
+		yes)	build_wizard=true ;;
+		no)	build_wizard=false ;;
+		*)	AC_MSG_ERROR(bad value ${enableval} for --enable-assistant) ;;
+	esac],
+	[build_wizard=check]
+)
+
+if test "$build_wizard" != "false" ; then
+	PKG_CHECK_MODULES(LIBGTKWIZARD, [gtk+-2.0 >= 2.22.0],[],
+		[if test "$build_wizard" = "true" ; then
+			AC_MSG_ERROR([gtk+-2.0 < 2.22.0, assistant cannot be compiled.])
+		else
+			build_wizard=false
+		fi]
+	)
+fi
+AM_CONDITIONAL(BUILD_WIZARD, test x$build_wizard != xfalse)
+if test "$build_wizard" != "false" ; then
+	build_wizard=true
+	 AC_DEFINE(BUILD_WIZARD, 1, [Define if wizard enabled] )
 fi
 
 AC_CHECK_HEADERS(libudev.h)
@@ -1037,6 +1061,7 @@ echo "Linphone build configuration ended."
 echo "Summary of build options:"
 printf "* %-30s %s\n" "Video support"		$video
 printf "* %-30s %s\n" "GTK interface"		$gtk_ui
+printf "* %-30s %s\n" "Account assistant"	$build_wizard
 printf "* %-30s %s\n" "Console interface"	$console_ui
 printf "* %-30s %s\n" "Tools"				$build_tools
 printf "* %-30s %s\n" "Message storage"		$enable_msg_storage

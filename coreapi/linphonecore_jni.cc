@@ -613,6 +613,7 @@ public:
 		LinphoneCoreData* lcData = (LinphoneCoreData*)linphone_core_v_table_get_user_data(table);
 		jstring msg = message ? env->NewStringUTF(message) : NULL;
 		env->CallVoidMethod(lcData->listener,lcData->displayStatusId,lcData->core,msg);
+		handle_possible_java_exception(env, lcData->listener);
 		if (msg) {
 			env->DeleteLocalRef(msg);
 		}
@@ -635,6 +636,7 @@ public:
 							r,
 							u,
 							d);
+		handle_possible_java_exception(env, lcData->listener);
 		if (r) {
 			env->DeleteLocalRef(r);
 		}
@@ -660,10 +662,7 @@ public:
 							,lcData->core
 							,env->CallStaticObjectMethod(lcData->globalStateClass,lcData->globalStateFromIntId,(jint)gstate),
 							msg);
-		if (env->ExceptionCheck()) {
-			ms_error("Listener %p raised an exception",lcData->listener);
-			env->ExceptionClear();
-		}
+		handle_possible_java_exception(env, lcData->listener);
 		if (msg) {
 			env->DeleteLocalRef(msg);
 		}
@@ -685,10 +684,7 @@ public:
 							,(jproxy=getProxy(env,proxy,lcData->core))
 							,env->CallStaticObjectMethod(lcData->registrationStateClass,lcData->registrationStateFromIntId,(jint)state),
 							msg);
-		if (env->ExceptionCheck()) {
-			ms_error("Listener %p raised an exception",lcData->listener);
-			env->ExceptionClear();
-		}
+		handle_possible_java_exception(env, lcData->listener);
 		if (msg) {
 			env->DeleteLocalRef(msg);
 		}
@@ -711,10 +707,7 @@ public:
 							,(jcall=getCall(env,call))
 							,env->CallStaticObjectMethod(lcData->callStateClass,lcData->callStateFromIntId,(jint)state),
 							msg);
-		if (env->ExceptionCheck()) {
-			ms_error("Listener %p raised an exception",lcData->listener);
-			env->ExceptionClear();
-		}
+		handle_possible_java_exception(env, lcData->listener);
 		if (state==LinphoneCallReleased) {
 			linphone_call_set_user_pointer(call,NULL);
 			env->DeleteGlobalRef(jcall);
@@ -738,10 +731,7 @@ public:
 							,getCall(env,call)
 							,encrypted
 							,authentication_token ? env->NewStringUTF(authentication_token) : NULL);
-		if (env->ExceptionCheck()) {
-			ms_error("Listener %p raised an exception",lcData->listener);
-			env->ExceptionClear();
-		}
+		handle_possible_java_exception(env, lcData->listener);
 	}
 	static void notify_presence_received(LinphoneCore *lc,  LinphoneFriend *my_friend) {
 		JNIEnv *env = 0;
@@ -756,10 +746,7 @@ public:
 							,lcData->notifyPresenceReceivedId
 							,lcData->core
 							,getFriend(env,my_friend));
-		if (env->ExceptionCheck()) {
-			ms_error("Listener %p raised an exception",lcData->listener);
-			env->ExceptionClear();
-		}
+		handle_possible_java_exception(env, lcData->listener);
 	}
 	static void new_subscription_requested(LinphoneCore *lc,  LinphoneFriend *my_friend, const char* url) {
 		JNIEnv *env = 0;
@@ -775,10 +762,7 @@ public:
 							,lcData->core
 							,getFriend(env,my_friend)
 							,url ? env->NewStringUTF(url) : NULL);
-		if (env->ExceptionCheck()) {
-			ms_error("Listener %p raised an exception",lcData->listener);
-			env->ExceptionClear();
-		}
+		handle_possible_java_exception(env, lcData->listener);
 	}
 	static void dtmf_received(LinphoneCore *lc, LinphoneCall *call, int dtmf) {
 		JNIEnv *env = 0;
@@ -794,10 +778,7 @@ public:
 							,lcData->core
 							,getCall(env,call)
 							,dtmf);
-		if (env->ExceptionCheck()) {
-			ms_error("Listener %p raised an exception",lcData->listener);
-			env->ExceptionClear();
-		}
+		handle_possible_java_exception(env, lcData->listener);
 	}
 	static void text_received(LinphoneCore *lc, LinphoneChatRoom *room, const LinphoneAddress *from, const char *message) {
 		JNIEnv *env = 0;
@@ -814,10 +795,7 @@ public:
 							,env->NewObject(lcData->chatRoomClass,lcData->chatRoomCtrId,(jlong)room)
 							,env->NewObject(lcData->addressClass,lcData->addressCtrId,(jlong)from)
 							,message ? env->NewStringUTF(message) : NULL);
-		if (env->ExceptionCheck()) {
-			ms_error("Listener %p raised an exception",lcData->listener);
-			env->ExceptionClear();
-		}
+		handle_possible_java_exception(env, lcData->listener);
 	}
 	static void message_received(LinphoneCore *lc, LinphoneChatRoom *room, LinphoneChatMessage *msg) {
 		JNIEnv *env = 0;
@@ -835,10 +813,7 @@ public:
 							,lcData->core
 							,env->NewObject(lcData->chatRoomClass,lcData->chatRoomCtrId,(jlong)room)
 							,(jmsg = getChatMessage(env, msg)));
-		if (env->ExceptionCheck()) {
-			ms_error("Listener %p raised an exception",lcData->listener);
-			env->ExceptionClear();
-		}
+		handle_possible_java_exception(env, lcData->listener);
 	}
 	static void is_composing_received(LinphoneCore *lc, LinphoneChatRoom *room) {
 		JNIEnv *env = 0;
@@ -853,10 +828,7 @@ public:
 							,lcData->isComposingReceivedId
 							,lcData->core
 							,env->NewObject(lcData->chatRoomClass,lcData->chatRoomCtrId,(jlong)room));
-		if (env->ExceptionCheck()) {
-			ms_error("Listener %p raised an exception",lcData->listener);
-			env->ExceptionClear();
-		}
+		handle_possible_java_exception(env, lcData->listener);
 	}
 	static void ecCalibrationStatus(LinphoneCore *lc, LinphoneEcCalibratorStatus status, int delay_ms, void *data) {
 		JNIEnv *env = 0;
@@ -877,6 +849,7 @@ public:
 								,state
 								,delay_ms
 								,NULL);
+				handle_possible_java_exception(env, lcData->listener);
 			}
 			if (status != LinphoneEcCalibratorInProgress) {
 				linphone_core_v_table_destroy(table);
@@ -902,10 +875,7 @@ public:
 		else
 			env->CallVoidMethod(callobj, lcData->callSetVideoStatsId, statsobj);
 		env->CallVoidMethod(lcData->listener, lcData->callStatsUpdatedId, lcData->core, callobj, statsobj);
-		if (env->ExceptionCheck()) {
-			ms_error("Listener %p raised an exception",lcData->listener);
-			env->ExceptionClear();
-		}
+		handle_possible_java_exception(env, lcData->listener);
 	}
 	static void transferStateChanged(LinphoneCore *lc, LinphoneCall *call, LinphoneCallState remote_call_state){
 		JNIEnv *env = 0;
@@ -923,10 +893,7 @@ public:
 							,(jcall=getCall(env,call))
 							,env->CallStaticObjectMethod(lcData->callStateClass,lcData->callStateFromIntId,(jint)remote_call_state)
 							);
-		if (env->ExceptionCheck()) {
-			ms_error("Listener %p raised an exception",lcData->listener);
-			env->ExceptionClear();
-		}
+		handle_possible_java_exception(env, lcData->listener);
 	}
 	static void infoReceived(LinphoneCore *lc, LinphoneCall*call, const LinphoneInfoMessage *info){
 		JNIEnv *env = 0;
@@ -944,10 +911,7 @@ public:
 							,getCall(env,call)
 							,env->NewObject(lcData->infoMessageClass,lcData->infoMessageCtor,(jlong)copy_info)
 							);
-		if (env->ExceptionCheck()) {
-			ms_error("Listener %p raised an exception",lcData->listener);
-			env->ExceptionClear();
-		}
+		handle_possible_java_exception(env, lcData->listener);
 	}
 	static void subscriptionStateChanged(LinphoneCore *lc, LinphoneEvent *ev, LinphoneSubscriptionState state){
 		JNIEnv *env = 0;
@@ -968,10 +932,7 @@ public:
 							,jevent
 							,jstate
 							);
-		if (env->ExceptionCheck()) {
-			ms_error("Listener %p raised an exception",lcData->listener);
-			env->ExceptionClear();
-		}
+		handle_possible_java_exception(env, lcData->listener);
 		if (state==LinphoneSubscriptionTerminated){
 			/*loose the java reference */
 			linphone_event_set_user_data(ev,NULL);
@@ -997,10 +958,7 @@ public:
 							,jevent
 							,jstate
 							);
-		if (env->ExceptionCheck()) {
-			ms_error("Listener %p raised an exception",lcData->listener);
-			env->ExceptionClear();
-		}
+		handle_possible_java_exception(env, lcData->listener);
 	}
 	static void notifyReceived(LinphoneCore *lc, LinphoneEvent *ev, const char *evname, const LinphoneContent *content){
 		JNIEnv *env = 0;
@@ -1020,10 +978,7 @@ public:
 							,env->NewStringUTF(evname)
 							,content ? create_java_linphone_content(env,content) : NULL
 							);
-		if (env->ExceptionCheck()) {
-			ms_error("Listener %p raised an exception",lcData->listener);
-			env->ExceptionClear();
-		}
+		handle_possible_java_exception(env, lcData->listener);
 	}
 
 	static void configuringStatus(LinphoneCore *lc, LinphoneConfiguringState status, const char *message) {
@@ -1036,6 +991,7 @@ public:
 		LinphoneCoreVTable *table = linphone_core_get_current_vtable(lc);
 		LinphoneCoreData* lcData = (LinphoneCoreData*)linphone_core_v_table_get_user_data(table);
 		env->CallVoidMethod(lcData->listener, lcData->configuringStateId, lcData->core, env->CallStaticObjectMethod(lcData->configuringStateClass,lcData->configuringStateFromIntId,(jint)status), message ? env->NewStringUTF(message) : NULL);
+		handle_possible_java_exception(env, lcData->listener);
 	}
 
 	static void fileTransferProgressIndication(LinphoneCore *lc, LinphoneChatMessage *message, const LinphoneContent* content, size_t offset, size_t total) {
@@ -1059,6 +1015,7 @@ public:
 		if (jcontent) {
 			env->DeleteLocalRef(jcontent);
 		}
+		handle_possible_java_exception(env, lcData->listener);
 	}
 
 	static void fileTransferSend(LinphoneCore *lc, LinphoneChatMessage *message, const LinphoneContent* content, char* buff, size_t* size) {
@@ -1087,6 +1044,7 @@ public:
 		if (jbuffer) {
 			env->DeleteLocalRef(jbuffer);
 		}
+		handle_possible_java_exception(env, lcData->listener);
 	}
 
 	static void fileTransferRecv(LinphoneCore *lc, LinphoneChatMessage *message, const LinphoneContent* content, const char* buff, size_t size) {
@@ -1114,6 +1072,7 @@ public:
 		if (jcontent) {
 			env->DeleteLocalRef(jcontent);
 		}
+		handle_possible_java_exception(env, lcData->listener);
 	}
 	static void logCollectionUploadProgressIndication(LinphoneCore *lc, size_t offset, size_t total) {
 		JNIEnv *env = 0;
@@ -1129,10 +1088,7 @@ public:
 							,lcData->core
 							,(jlong)offset
 							,(jlong)total);
-		if (env->ExceptionCheck()) {
-			ms_error("Listener %p raised an exception",lcData->listener);
-			env->ExceptionClear();
-		}
+		handle_possible_java_exception(env, lcData->listener);
 	}
 	static void logCollectionUploadStateChange(LinphoneCore *lc, LinphoneCoreLogCollectionUploadState state, const char *info) {
 		JNIEnv *env = 0;
@@ -1149,12 +1105,19 @@ public:
 							,lcData->core
 							,env->CallStaticObjectMethod(lcData->logCollectionUploadStateClass,lcData->logCollectionUploadStateFromIntId,(jint)state),
 							msg);
-		if (env->ExceptionCheck()) {
-			ms_error("Listener %p raised an exception",lcData->listener);
-			env->ExceptionClear();
-		}
+		handle_possible_java_exception(env, lcData->listener);
 		if (msg) {
 			env->DeleteLocalRef(msg);
+		}
+	}
+
+private:
+	static inline void handle_possible_java_exception(JNIEnv *env, jobject listener)
+	{
+		if (env->ExceptionCheck()) {
+			env->ExceptionDescribe();
+			env->ExceptionClear();
+			ms_error("Listener %p raised an exception",listener);
 		}
 	}
 };
@@ -3128,13 +3091,6 @@ extern "C" void Java_org_linphone_core_LinphoneChatRoomImpl_markAsRead(JNIEnv*  
 	linphone_chat_room_mark_as_read((LinphoneChatRoom*)ptr);
 }
 
-extern "C" void Java_org_linphone_core_LinphoneChatRoomImpl_updateUrl(JNIEnv*  env
-															 ,jobject  thiz
-															 ,jlong room
-															 ,jlong msg) {
-	linphone_chat_room_update_url((LinphoneChatRoom*)room, (LinphoneChatMessage*)msg);
-}
-
 extern "C" void Java_org_linphone_core_LinphoneChatRoomImpl_destroy(JNIEnv*  env
 																	,jobject  thiz
 																	,jlong ptr) {
@@ -3532,7 +3488,7 @@ extern "C" void Java_org_linphone_core_LinphoneCoreImpl_setVideoWindowId(JNIEnv*
 		obj = env->NewGlobalRef(obj);
 		ms_message("Java_org_linphone_core_LinphoneCoreImpl_setVideoWindowId(): NewGlobalRef(%p)",obj);
 	}else ms_message("Java_org_linphone_core_LinphoneCoreImpl_setVideoWindowId(): setting to NULL");
-	linphone_core_set_native_video_window_id((LinphoneCore*)lc,(unsigned long)obj);
+	linphone_core_set_native_video_window_id((LinphoneCore*)lc,(void *)obj);
 	if (oldWindow != NULL) {
 		ms_message("Java_org_linphone_core_LinphoneCoreImpl_setVideoWindowId(): DeleteGlobalRef(%p)",oldWindow);
 		env->DeleteGlobalRef(oldWindow);
@@ -3548,7 +3504,7 @@ extern "C" void Java_org_linphone_core_LinphoneCoreImpl_setPreviewWindowId(JNIEn
 		obj = env->NewGlobalRef(obj);
 		ms_message("Java_org_linphone_core_LinphoneCoreImpl_setPreviewWindowId(): NewGlobalRef(%p)",obj);
 	}else ms_message("Java_org_linphone_core_LinphoneCoreImpl_setPreviewWindowId(): setting to NULL");
-	linphone_core_set_native_preview_window_id((LinphoneCore*)lc,(unsigned long)obj);
+	linphone_core_set_native_preview_window_id((LinphoneCore*)lc,(void *)obj);
 	if (oldWindow != NULL) {
 		ms_message("Java_org_linphone_core_LinphoneCoreImpl_setPreviewWindowId(): DeleteGlobalRef(%p)",oldWindow);
 		env->DeleteGlobalRef(oldWindow);
@@ -6075,7 +6031,7 @@ extern "C" void Java_org_linphone_core_LinphonePlayerImpl_destroy(JNIEnv *env, j
 extern "C" jlong Java_org_linphone_core_LinphoneCoreImpl_createLocalPlayer(JNIEnv *env, jobject jobj, jlong ptr, jobject window) {
 	jobject window_ref = NULL;
 	window_ref = env->NewGlobalRef(window);
-	LinphonePlayer *player = linphone_core_create_local_player((LinphoneCore *)ptr, NULL, "MSAndroidDisplay", (unsigned long)window_ref);
+	LinphonePlayer *player = linphone_core_create_local_player((LinphoneCore *)ptr, NULL, "MSAndroidDisplay", (void *)window_ref);
 	if(player == NULL) {
 		ms_error("Fails to create a player");
 		if(window_ref) env->DeleteGlobalRef(window_ref);
